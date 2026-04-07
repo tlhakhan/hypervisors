@@ -1,4 +1,3 @@
-#!/usr/bin/env ansible-playbook
 - name: Setup hypervisor
   hosts: hypervisors
 
@@ -48,12 +47,6 @@
         backrefs: yes
       notify: restart avahi-daemon
 
-    - name: Disable and stop apparmor service
-      systemd:
-        name: apparmor
-        state: stopped
-        enabled: no
-
     - name: Update OS physical volume
       lvg:
         vg: ubuntu-vg
@@ -76,22 +69,6 @@
         owner: libvirt-qemu
         group: kvm
 
-    - name: Add libvirt, libvirt-qemu, and libvirt-dnsmasq groups to ansible user
-      user:
-        name: "{{ ansible_user }}"
-        groups: libvirt,libvirt-qemu,libvirt-dnsmasq
-        append: yes
-      when: ansible_user | length > 0
-
-    - name: Grant passwordless sudo to ansible user
-      copy:
-        dest: "/etc/sudoers.d/{{ ansible_user }}"
-        content: "{{ ansible_user }} ALL=(ALL) NOPASSWD:ALL"
-        mode: 0440
-        owner: root
-        group: root
-      when: ansible_user | length > 0
- 
     - name: Update /etc/default/grub for GPU pass through
       lineinfile:
         path: /etc/default/grub
@@ -115,6 +92,7 @@
           blacklist nvidia_modeset
           blacklist nvidiafb
           blacklist nouveau
+
           # Blacklist Intel Arc / Xe GPU modules
           blacklist xe
           blacklist i915
