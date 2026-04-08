@@ -44,6 +44,31 @@
         name: nvme-cli
         state: present
 
+    - name: Add VFIO modules to initramfs
+      lineinfile:
+        path: /etc/initramfs-tools/modules
+        line: "{{ item }}"
+      loop:
+        - vfio
+        - vfio_iommu_type1
+        - vfio_pci
+        - vfio_virqfd
+      notify:
+        - update initramfs
+        - reboot system
+
+    - name: Add vfio.conf file to /etc/modprobe.d
+      copy:
+        dest: /etc/modprobe.d/vfio.conf
+        content: |
+          softdep snd_hda_intel pre: vfio-pci
+          options vfio-pci ids={{ gpu_pci_ids | join(',') }}
+          options vfio-pci disable_vga=1
+      notify:
+        - update initramfs
+        - reboot system
+      when: gpu_pci_ids | length > 0
+
     - name: Update avahi-daemon.conf for only br0
       lineinfile:
         path: /etc/avahi/avahi-daemon.conf
