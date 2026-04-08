@@ -39,6 +39,11 @@
         - avahi-daemon
         - avahi-utils
 
+    - name: Install nvme-cli
+      apt:
+        name: nvme-cli
+        state: present
+
     - name: Update avahi-daemon.conf for only br0
       lineinfile:
         path: /etc/avahi/avahi-daemon.conf
@@ -103,8 +108,24 @@
 
     - name: Send over netplan for br0 setup
       copy:
-        src: 50-cloud-init.yaml
         dest: /etc/netplan/50-cloud-init.yaml
+        content: |-
+          network:
+            version: 2
+            ethernets:
+              uplink:
+                match:
+                  name: "en*"
+                dhcp4: false
+                wakeonlan: true
+            bridges:
+              br0:
+                interfaces:
+                  - uplink
+                dhcp4: true
+                parameters:
+                  stp: false
+                  forward-delay: 0
         mode: 0600
         owner: root
         group: root
@@ -125,6 +146,35 @@
       loop:
         - unattended-upgrades.service
         - apt-daily-upgrade.timer
+
+    - name: Install cpupower utility
+      apt:
+        name:
+          - linux-tools-common
+          - linux-tools-generic
+        state: present
+
+    - name: Create cpu-performance systemd service
+      copy:
+        dest: /etc/systemd/system/cpu-performance.service
+        content: |-
+          [Unit]
+          Description=Set CPU governor to performance
+
+          [Service]
+          Type=oneshot
+          ExecStart=/usr/bin/cpupower frequency-set -g performance
+          RemainAfterExit=yes
+
+          [Install]
+          WantedBy=multi-user.target
+
+    - name: Enable and start cpu-performance service
+      systemd:
+        name: cpu-performance.service
+        enabled: yes
+        state: started
+        daemon_reload: yes
 
   handlers:
     - name: restart avahi-daemon
