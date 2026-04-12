@@ -22,7 +22,7 @@ hypervisors:
     sparkle-1.local:
       has_gpu: True
       gpu_pci_ids:
-        - 8086:e20c # 03:00.0 VGA compatible controller [0300]: Intel Corporation Device [8086:e20c]
-        - 8086:e2f7 # 04:00.0 Audio device [0403]: Intel Corporation Device [8086:e2f7]
+        - 8086:e20c # 03:00.0 VGA compatible controller [0300]: Intel Arc B570 [8086:e20c]
+        - 8086:e2f7 # 04:00.0 Audio device [0403]: Intel Arc B570 Audio [8086:e2f7]
       root_disks:
         - /dev/disk/by-id/nvme-SHPP41-2000GM_SND4N423512104I6G-part3

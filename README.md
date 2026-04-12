@@ -19,7 +19,7 @@ Ansible playbook to configure homelab servers as KVM hypervisors on Ubuntu 24.04
 | Host | GPU | Root disks |
 |---|---|---|
 | `nvidia-1.local` | NVIDIA RTX 4080 SUPER | 2× NVMe |
-| `sparkle-1.local` | Intel Arc | 1× NVMe |
+| `sparkle-1.local` | Intel Arc B570 | 1× NVMe |
 
 ## Usage
 
@@ -34,6 +34,6 @@ Privilege escalation is required (`become: true`). You will be prompted for the 
 | Variable | Default | Description |
 |---|---|---|
 | `has_gpu` | `false` | Enable GPU passthrough tasks |
-| `gpu_pci_ids` | `[]` | PCI IDs to bind to vfio-pci (VGA + audio device) |
+| `gpu_pci_ids` | `[]` | PCI IDs to bind to vfio-pci (VGA + audio device) — find them with `lspci -nn`, look for the VGA compatible controller and Audio device lines |
 | `root_disks` | `[]` | Disk paths to add to `ubuntu-vg` for LVM resize |
 | `wakelet_pubkey` | *(set in vars)* | SSH public key for the wakelet shutdown user |
