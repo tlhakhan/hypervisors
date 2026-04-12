@@ -6,6 +6,8 @@ hypervisors:
     ansible_become: True
     has_gpu: False
     gpu_pci_ids: []
+    root_disks: []
+    wakelet_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDywWj6OTinhgHIlTl8fJqwsjq9dXOKhOgdcMLbQvL+w"
 
   hosts:
     nvidia-1.local:
