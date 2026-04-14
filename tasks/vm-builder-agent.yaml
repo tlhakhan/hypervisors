@@ -1,6 +1,45 @@
+- name: Install Terraform apt repository prerequisites
+  apt:
+    name:
+      - gnupg
+      - software-properties-common
+    state: present
+
+- name: Download HashiCorp apt repository key
+  get_url:
+    url: https://apt.releases.hashicorp.com/gpg
+    dest: /usr/share/keyrings/hashicorp-archive-keyring.asc
+    mode: "0644"
+    owner: root
+    group: root
+  register: hashicorp_apt_key
+
+- name: Dearmor HashiCorp apt repository key
+  command:
+    argv:
+      - gpg
+      - --dearmor
+      - --yes
+      - --output
+      - /usr/share/keyrings/hashicorp-archive-keyring.gpg
+      - /usr/share/keyrings/hashicorp-archive-keyring.asc
+  when: hashicorp_apt_key.changed
+
+- name: Add HashiCorp apt repository
+  apt_repository:
+    repo: "deb [arch=amd64 signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com {{ ansible_facts.lsb.codename }} main"
+    filename: hashicorp
+    state: present
+    update_cache: yes
+
+- name: Install Terraform
+  apt:
+    name: terraform
+    state: present
+
 - name: Install vm-builder-agent binary
   get_url:
-    url: "{{ vm_builder_agent_download_url }}"
+    url: "https://github.com/tlhakhan/vm-builder-agent/releases/latest/download/vm-builder-agent-linux-amd64"
     dest: /usr/local/bin/vm-builder-agent
     mode: "0755"
     owner: root
@@ -29,9 +68,9 @@
         --agent-mtls \
         --agent-trusted-ca-url {{ vm_builder_agent_trusted_ca_url }} \
         --private-dir /etc/vm-builder-agent/private \
-        --agent-authorized-client-cn {{ vm_builder_agent_authorized_client_cn }} \
-        --core-repo {{ vm_builder_agent_core_repo }} \
-        --terraform {{ vm_builder_agent_terraform_bin }} \
+        --agent-authorized-client-cn vm-builder-apiserver \
+        --core-repo https://github.com/tlhakhan/vm-builder-core \
+        --terraform /usr/bin/terraform \
         --workspaces-dir /var/lib/vm-builder-agent/workspaces
       Restart=on-failure
       RestartSec=5s

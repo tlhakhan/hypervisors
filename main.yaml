@@ -20,8 +20,6 @@
   tasks:
     - import_tasks: tasks/packages.yaml
 
-    - import_tasks: tasks/terraform.yaml
-
     - import_tasks: tasks/gpu.yaml
 
     - import_tasks: tasks/network.yaml
