@@ -62,6 +62,7 @@
 
       [Service]
       ExecStartPre=mkdir -p /var/lib/vm-builder-agent/workspaces
+      ExecStartPre=mkdir -p /var/lib/vm-builder-agent/cloud-image-cache
       ExecStartPre=mkdir -p /etc/vm-builder-agent/private
       ExecStart=/usr/local/bin/vm-builder-agent \
         --listen :8443 \
@@ -71,7 +72,8 @@
         --agent-authorized-client-cn vm-builder-apiserver \
         --core-repo https://github.com/tlhakhan/vm-builder-core \
         --terraform /usr/bin/terraform \
-        --workspaces-dir /var/lib/vm-builder-agent/workspaces
+        --workspaces-dir /var/lib/vm-builder-agent/workspaces \
+        --cloud-image-cache-dir /var/lib/vm-builder-agent/cloud-image-cache
       Restart=on-failure
       RestartSec=5s
       StandardOutput=journal
