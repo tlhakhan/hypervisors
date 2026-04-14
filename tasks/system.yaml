@@ -1,0 +1,37 @@
+- name: Disable Unattended-Upgrade in apt.conf
+  copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "0";
+
+- name: Disable unattended upgrades service and timers
+  systemd:
+    name: "{{ item }}"
+    enabled: False
+    state: stopped
+  loop:
+    - unattended-upgrades.service
+    - apt-daily-upgrade.timer
+
+- name: Create cpu-performance systemd service
+  copy:
+    dest: /etc/systemd/system/cpu-performance.service
+    content: |-
+      [Unit]
+      Description=Set CPU governor to performance
+
+      [Service]
+      Type=oneshot
+      ExecStart=/usr/bin/cpupower frequency-set -g performance
+      RemainAfterExit=yes
+
+      [Install]
+      WantedBy=multi-user.target
+
+- name: Enable and start cpu-performance service
+  systemd:
+    name: cpu-performance.service
+    enabled: yes
+    state: started
+    daemon_reload: yes

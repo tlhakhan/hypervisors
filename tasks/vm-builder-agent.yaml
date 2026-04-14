@@ -1,0 +1,55 @@
+- name: Install vm-builder-agent binary
+  get_url:
+    url: "{{ vm_builder_agent_download_url }}"
+    dest: /usr/local/bin/vm-builder-agent
+    mode: "0755"
+    owner: root
+    group: root
+  notify: restart vm-builder-agent
+
+- name: Install vm-builder-agent systemd unit
+  copy:
+    dest: /etc/systemd/system/vm-builder-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Unit]
+      Description=vm-builder-agent
+      Documentation=https://github.com/tlhakhan/vm-builder-agent
+      After=network-online.target libvirtd.service
+      Wants=network-online.target
+      Requires=libvirtd.service
+
+      [Service]
+      ExecStartPre=mkdir -p /var/lib/vm-builder-agent/workspaces
+      ExecStartPre=mkdir -p /etc/vm-builder-agent/private
+      ExecStart=/usr/local/bin/vm-builder-agent \
+        --listen :8443 \
+        --agent-mtls \
+        --agent-trusted-ca-url {{ vm_builder_agent_trusted_ca_url }} \
+        --private-dir /etc/vm-builder-agent/private \
+        --agent-authorized-client-cn {{ vm_builder_agent_authorized_client_cn }} \
+        --core-repo {{ vm_builder_agent_core_repo }} \
+        --terraform {{ vm_builder_agent_terraform_bin }} \
+        --workspaces-dir /var/lib/vm-builder-agent/workspaces
+      Restart=on-failure
+      RestartSec=5s
+      StandardOutput=journal
+      StandardError=journal
+      SyslogIdentifier=vm-builder-agent
+      User=root
+      Group=root
+
+      [Install]
+      WantedBy=multi-user.target
+  notify:
+    - reload systemd
+    - restart vm-builder-agent
+
+- name: Enable and start vm-builder-agent
+  systemd:
+    name: vm-builder-agent.service
+    enabled: yes
+    state: started
+    daemon_reload: yes

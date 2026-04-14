@@ -1,0 +1,32 @@
+- name: Update avahi-daemon.conf for only br0
+  lineinfile:
+    path: /etc/avahi/avahi-daemon.conf
+    regexp: '^#?allow-interfaces=.*'
+    line: 'allow-interfaces=br0'
+    backrefs: yes
+  notify: restart avahi-daemon
+
+- name: Send over netplan for br0 setup
+  copy:
+    dest: /etc/netplan/50-cloud-init.yaml
+    content: |-
+      network:
+        version: 2
+        ethernets:
+          uplink:
+            match:
+              name: "e[nt]*"
+            dhcp4: false
+            wakeonlan: true
+        bridges:
+          br0:
+            interfaces:
+              - uplink
+            dhcp4: true
+            parameters:
+              stp: false
+              forward-delay: 0
+    mode: 0600
+    owner: root
+    group: root
+  notify: reboot system

@@ -1,0 +1,56 @@
+- name: Add VFIO modules to initramfs
+  lineinfile:
+    path: /etc/initramfs-tools/modules
+    line: "{{ item }}"
+  loop:
+    - vfio
+    - vfio_iommu_type1
+    - vfio_pci
+    - vfio_virqfd
+  notify:
+    - update initramfs
+    - reboot system
+
+- name: Add vfio.conf file to /etc/modprobe.d
+  copy:
+    dest: /etc/modprobe.d/vfio.conf
+    content: |
+      softdep snd_hda_intel pre: vfio-pci
+      options vfio-pci ids={{ gpu_pci_ids | join(',') }}
+      options vfio-pci disable_vga=1
+  notify:
+    - update initramfs
+    - reboot system
+  when: gpu_pci_ids | length > 0
+
+- name: Update /etc/default/grub for GPU pass through
+  lineinfile:
+    path: /etc/default/grub
+    regexp: '^GRUB_CMDLINE_LINUX='
+    line: "GRUB_CMDLINE_LINUX=\"amd_iommu=on amd_iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids={{ gpu_pci_ids | join(',') }} vfio-pci.disable_vga=1\""
+  notify:
+    - update grub
+    - reboot system
+  when:
+    - gpu_pci_ids | length > 0
+    - has_gpu == True
+
+- name: Blacklist GPU modules
+  copy:
+    dest: /etc/modprobe.d/no-gpu.conf
+    content: |-
+      # Blacklist Nvidia GPU modules
+      blacklist nvidia
+      blacklist nvidia_drm
+      blacklist nvidia_uvm
+      blacklist nvidia_modeset
+      blacklist nvidiafb
+      blacklist nouveau
+
+      # Blacklist Intel Arc / Xe GPU modules
+      blacklist xe
+      blacklist i915
+  notify:
+    - update initramfs
+    - reboot system
+  when: has_gpu == True

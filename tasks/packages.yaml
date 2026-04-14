@@ -1,0 +1,44 @@
+- name: Update apt package list
+  apt:
+    update_cache: True
+  changed_when: False
+
+- name: Install Hypervisor packages
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - qemu-kvm
+    - libvirt-daemon-system
+    - libvirt-clients
+    - bridge-utils
+    - genisoimage
+
+- name: Install vm-builder-agent runtime packages
+  apt:
+    name:
+      - git
+      - xsltproc
+    state: present
+  when: vm_builder_agent_enabled | bool
+
+- name: Install mDNS packages for .local resolution
+  apt:
+    name: "{{ item }}"
+    state: present
+  loop:
+    - libnss-mdns
+    - avahi-daemon
+    - avahi-utils
+
+- name: Install nvme-cli
+  apt:
+    name: nvme-cli
+    state: present
+
+- name: Install cpupower utility
+  apt:
+    name:
+      - linux-tools-common
+      - linux-tools-generic
+    state: present

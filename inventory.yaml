@@ -7,10 +7,19 @@ hypervisors:
     has_gpu: False
     gpu_pci_ids: []
     root_disks: []
+    wakelet_enabled: False
     wakelet_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDywWj6OTinhgHIlTl8fJqwsjq9dXOKhOgdcMLbQvL+w"
+    vm_builder_agent_enabled: False
+    vm_builder_agent_download_url: "https://github.com/tlhakhan/vm-builder-agent/releases/latest/download/vm-builder-agent-linux-amd64"
+    vm_builder_agent_core_repo: "https://github.com/tlhakhan/vm-builder-core"
+    vm_builder_agent_terraform_bin: "terraform"
+    vm_builder_agent_trusted_ca_url: "https://gist.githubusercontent.com/tlhakhan/239c4341cfbe72e10aea4b0daf72f5f4/raw/c076b0e4ccaf2888514ea7797740503b53cda576/vm-builder-ca.crt"
+    vm_builder_agent_authorized_client_cn: "vm-builder-apiserver"
 
   hosts:
     nvidia-1.local:
+      wakelet_enabled: True
+      vm_builder_agent_enabled: True
       has_gpu: True
       gpu_pci_ids:
         - 10de:2702 # 01:00.0 VGA compatible controller [0300]: NVIDIA Corporation AD103 [GeForce RTX 4080 SUPER] [10de:2702] (rev a1)
@@ -20,6 +29,8 @@ hypervisors:
         - /dev/disk/by-id/nvme-SHPP41-1000GM_AJD1N595713201V0H-part1
 
     sparkle-1.local:
+      wakelet_enabled: True
+      vm_builder_agent_enabled: True
       has_gpu: True
       gpu_pci_ids:
         - 8086:e20c # 03:00.0 VGA compatible controller [0300]: Intel Arc B570 [8086:e20c]

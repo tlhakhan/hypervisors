@@ -1,0 +1,21 @@
+- name: Create wakelet user
+  user:
+    name: wakelet
+    shell: /bin/bash
+    create_home: yes
+    password_lock: yes
+
+- name: Add wakelet sudoers entry for shutdown
+  copy:
+    dest: /etc/sudoers.d/wakelet
+    content: "wakelet ALL=(ALL) NOPASSWD: /sbin/shutdown -h now\n"
+    mode: '0440'
+    owner: root
+    group: root
+    validate: visudo -cf %s
+
+- name: Add wakelet SSH authorized key with forced shutdown command
+  authorized_key:
+    user: wakelet
+    key: "{{ wakelet_pubkey }}"
+    key_options: 'command="sudo /sbin/shutdown -h now",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty'

@@ -1,0 +1,24 @@
+- debug:
+    msg: '{{ root_disks }}'
+
+- name: Update OS physical volume
+  lvg:
+    vg: ubuntu-vg
+    pvs: "{{ root_disks | join(',') }}"
+    pvresize: True
+  when: root_disks | length > 0
+
+- name: Update OS logical vol
+  lvol:
+    vg: ubuntu-vg
+    lv: ubuntu-lv
+    size: 95%PVS
+    resizefs: True
+
+- name: Create /data directory for VM storage
+  file:
+    path: /data
+    state: directory
+    mode: 0755
+    owner: libvirt-qemu
+    group: kvm

@@ -10,218 +10,31 @@
         fail_msg: "This playbook only supports Ubuntu Noble (24.04)."
         success_msg: "Assertions passed, running playbook..."
 
+    - name: vm-builder-agent mTLS settings are provided
+      assert:
+        that:
+          - vm_builder_agent_trusted_ca_url | length > 0
+        fail_msg: "Set vm_builder_agent_trusted_ca_url before enabling vm-builder-agent."
+      when: vm_builder_agent_enabled | bool
+
   tasks:
-    - debug:
-        msg: '{{ root_disks }}'
+    - import_tasks: tasks/packages.yaml
 
-    - name: Update apt package list
-      apt:
-        update_cache: True
-      changed_when: False
+    - import_tasks: tasks/terraform.yaml
 
-    - name: Install Hypervisor packages
-      apt:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - qemu-kvm
-        - libvirt-daemon-system
-        - libvirt-clients
-        - bridge-utils
-        - genisoimage
+    - import_tasks: tasks/gpu.yaml
 
-    - name: Install mDNS packages for .local resolution
-      apt:
-        name: "{{ item }}"
-        state: present
-      loop:
-        - libnss-mdns
-        - avahi-daemon
-        - avahi-utils
+    - import_tasks: tasks/network.yaml
 
-    - name: Install nvme-cli
-      apt:
-        name: nvme-cli
-        state: present
+    - import_tasks: tasks/storage.yaml
 
-    - name: Add VFIO modules to initramfs
-      lineinfile:
-        path: /etc/initramfs-tools/modules
-        line: "{{ item }}"
-      loop:
-        - vfio
-        - vfio_iommu_type1
-        - vfio_pci
-        - vfio_virqfd
-      notify:
-        - update initramfs
-        - reboot system
+    - import_tasks: tasks/system.yaml
 
-    - name: Add vfio.conf file to /etc/modprobe.d
-      copy:
-        dest: /etc/modprobe.d/vfio.conf
-        content: |
-          softdep snd_hda_intel pre: vfio-pci
-          options vfio-pci ids={{ gpu_pci_ids | join(',') }}
-          options vfio-pci disable_vga=1
-      notify:
-        - update initramfs
-        - reboot system
-      when: gpu_pci_ids | length > 0
+    - import_tasks: tasks/wakelet.yaml
+      when: wakelet_enabled | bool
 
-    - name: Update avahi-daemon.conf for only br0
-      lineinfile:
-        path: /etc/avahi/avahi-daemon.conf
-        regexp: '^#?allow-interfaces=.*'
-        line: 'allow-interfaces=br0'
-        backrefs: yes
-      notify: restart avahi-daemon
-
-    - name: Update OS physical volume
-      lvg:
-        vg: ubuntu-vg
-        pvs: "{{ root_disks | join(',') }}"
-        pvresize: True
-      when: root_disks | length > 0
-
-    - name: Update OS logical vol
-      lvol:
-        vg: ubuntu-vg
-        lv: ubuntu-lv
-        size: 95%PVS
-        resizefs: True
-
-    - name: Create /data directory for VM storage
-      file:
-        path: /data
-        state: directory
-        mode: 0755
-        owner: libvirt-qemu
-        group: kvm
-
-    - name: Update /etc/default/grub for GPU pass through
-      lineinfile:
-        path: /etc/default/grub
-        regexp: '^GRUB_CMDLINE_LINUX='
-        line: "GRUB_CMDLINE_LINUX=\"amd_iommu=on amd_iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids={{ gpu_pci_ids | join(',') }} vfio-pci.disable_vga=1\""
-      notify:
-        - update grub
-        - reboot system
-      when:
-        - gpu_pci_ids | length > 0
-        - has_gpu == True
-
-    - name: Blacklist GPU modules
-      copy:
-        dest: /etc/modprobe.d/no-gpu.conf
-        content: |-
-          # Blacklist Nvidia GPU modules
-          blacklist nvidia
-          blacklist nvidia_drm
-          blacklist nvidia_uvm
-          blacklist nvidia_modeset
-          blacklist nvidiafb
-          blacklist nouveau
-
-          # Blacklist Intel Arc / Xe GPU modules
-          blacklist xe
-          blacklist i915
-      notify:
-        - update initramfs
-        - reboot system
-      when: has_gpu == True
-
-    - name: Send over netplan for br0 setup
-      copy:
-        dest: /etc/netplan/50-cloud-init.yaml
-        content: |-
-          network:
-            version: 2
-            ethernets:
-              uplink:
-                match:
-                  name: "e[nt]*"
-                dhcp4: false
-                wakeonlan: true
-            bridges:
-              br0:
-                interfaces:
-                  - uplink
-                dhcp4: true
-                parameters:
-                  stp: false
-                  forward-delay: 0
-        mode: 0600
-        owner: root
-        group: root
-      notify: reboot system
-
-    - name: Disable Unattended-Upgrade in apt.conf
-      copy:
-        dest: /etc/apt/apt.conf.d/20auto-upgrades
-        content: |
-          APT::Periodic::Update-Package-Lists "1";
-          APT::Periodic::Unattended-Upgrade "0";
-
-    - name: Disable unattended upgrades service and timers
-      systemd:
-        name: "{{ item }}"
-        enabled: False
-        state: stopped
-      loop:
-        - unattended-upgrades.service
-        - apt-daily-upgrade.timer
-
-    - name: Install cpupower utility
-      apt:
-        name:
-          - linux-tools-common
-          - linux-tools-generic
-        state: present
-
-    - name: Create cpu-performance systemd service
-      copy:
-        dest: /etc/systemd/system/cpu-performance.service
-        content: |-
-          [Unit]
-          Description=Set CPU governor to performance
-
-          [Service]
-          Type=oneshot
-          ExecStart=/usr/bin/cpupower frequency-set -g performance
-          RemainAfterExit=yes
-
-          [Install]
-          WantedBy=multi-user.target
-
-    - name: Enable and start cpu-performance service
-      systemd:
-        name: cpu-performance.service
-        enabled: yes
-        state: started
-        daemon_reload: yes
-
-    - name: Create wakelet user
-      user:
-        name: wakelet
-        shell: /bin/bash
-        create_home: yes
-        password_lock: yes
-
-    - name: Add wakelet sudoers entry for shutdown
-      copy:
-        dest: /etc/sudoers.d/wakelet
-        content: "wakelet ALL=(ALL) NOPASSWD: /sbin/shutdown -h now\n"
-        mode: '0440'
-        owner: root
-        group: root
-        validate: visudo -cf %s
-
-    - name: Add wakelet SSH authorized key with forced shutdown command
-      authorized_key:
-        user: wakelet
-        key: "{{ wakelet_pubkey }}"
-        key_options: 'command="sudo /sbin/shutdown -h now",no-port-forwarding,no-X11-forwarding,no-agent-forwarding,no-pty'
+    - import_tasks: tasks/vm-builder-agent.yaml
+      when: vm_builder_agent_enabled | bool
 
   handlers:
     - name: restart avahi-daemon
@@ -235,6 +48,16 @@
 
     - name: update initramfs
       command: update-initramfs -u
+
+    - name: reload systemd
+      systemd:
+        daemon_reload: yes
+
+    - name: restart vm-builder-agent
+      systemd:
+        name: vm-builder-agent.service
+        state: restarted
+      when: vm_builder_agent_enabled | bool
 
     - name: reboot system
       command: reboot
