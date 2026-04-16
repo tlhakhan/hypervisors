@@ -39,7 +39,11 @@
 
 - name: Install vm-builder-agent binary
   get_url:
-    url: "https://github.com/tlhakhan/vm-builder-agent/releases/latest/download/vm-builder-agent-linux-amd64"
+    url: >-
+      https://github.com/tlhakhan/vm-builder-agent/releases/{{
+        'latest/download' if (vm_builder_agent_version | default('latest')) == 'latest'
+        else 'download/' ~ (vm_builder_agent_version | default('latest'))
+      }}/vm-builder-agent-linux-amd64
     dest: /usr/local/bin/vm-builder-agent
     mode: "0755"
     owner: root

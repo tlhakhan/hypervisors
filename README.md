@@ -51,11 +51,13 @@ Privilege escalation is required (`become: true`). You will be prompted for the 
 | `wakelet_enabled` | `false` | Enable `wakelet` user and shutdown access setup |
 | `wakelet_pubkey` | *(set in vars)* | SSH public key for the wakelet shutdown user |
 | `vm_builder_agent_enabled` | `false` | Enable `vm-builder-agent` installation and service management |
+| `vm_builder_agent_version` | `latest` | Release selector for the `vm-builder-agent` binary; use `latest` or a specific GitHub release tag |
 | `vm_builder_agent_trusted_ca_url` | `""` | URL the agent fetches to get the CA used to verify client certificates |
 
 ## vm-builder-agent notes
 
 - The playbook installs the published `vm-builder-agent` `linux-amd64` release binary instead of building from source, so the hypervisors do not need a Go toolchain.
+- By default the playbook installs the latest published release. Set `vm_builder_agent_version` to a specific release tag such as `"v0.1.2"` to pin the agent version.
 - The service uses the upstream `vm-builder-core` repository and the default authorized client CN `vm-builder-apiserver`.
 - The service also installs `git` and `xsltproc`, which `vm-builder-agent` and `vm-builder-core` need at runtime. Terraform is installed by the playbook and the service uses `/usr/bin/terraform`.
 - The service always starts with agent mTLS enabled on `:8443`, uses `/etc/vm-builder-agent/private` for generated TLS material, and stores workspaces in `/var/lib/vm-builder-agent/workspaces`, matching the upstream example service.
