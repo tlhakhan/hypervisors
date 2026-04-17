@@ -10,7 +10,7 @@ hypervisors:
     wakelet_enabled: False
     wakelet_pubkey: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIDywWj6OTinhgHIlTl8fJqwsjq9dXOKhOgdcMLbQvL+w"
     vm_builder_agent_enabled: False
-    vm_builder_agent_version: v1.4.0
+    vm_builder_agent_version: v1.5.0
     vm_builder_agent_trusted_ca_url: "https://homelab.tenzin.io/api/pki/vm-builder-ca.crt"
 
   hosts:
