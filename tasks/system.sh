@@ -5,7 +5,7 @@ log_info "--- Task: system ---"
 _apt_conf='APT::Periodic::Update-Package-Lists "1";
 APT::Periodic::Unattended-Upgrade "0";
 '
-write_file /etc/apt/apt.conf.d/20auto-upgrades "$_apt_conf"
+write_file /etc/apt/apt.conf.d/20auto-upgrades "$_apt_conf" || true
 
 # 2. Stop and disable unattended upgrade services
 ensure_service_disabled_stopped unattended-upgrades.service
