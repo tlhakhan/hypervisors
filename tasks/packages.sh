@@ -19,3 +19,7 @@ install_packages "${_base_pkgs[@]}"
 if [[ "$VM_BUILDER_AGENT_ENABLED" == true ]]; then
     install_packages git xsltproc
 fi
+
+if [[ "$ZPOOL_ENABLED" == true ]]; then
+    install_packages zfsutils-linux
+fi

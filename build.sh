@@ -98,6 +98,7 @@ RESOLVE_FUNC
         "${REPO_ROOT}/tasks/gpu.sh" \
         "${REPO_ROOT}/tasks/network.sh" \
         "${REPO_ROOT}/tasks/storage.sh" \
+        "${REPO_ROOT}/tasks/zpool.sh" \
         "${REPO_ROOT}/tasks/system.sh" \
         "${REPO_ROOT}/tasks/wakelet.sh" \
         "${REPO_ROOT}/tasks/vm-builder-agent.sh"; do
@@ -150,6 +151,7 @@ task_packages
 task_gpu
 task_network
 task_storage
+[[ "$ZPOOL_ENABLED" == true ]] && task_zpool
 task_system
 
 [[ "$WAKELET_ENABLED" == true ]] && task_wakelet

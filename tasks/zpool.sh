@@ -1,0 +1,119 @@
+#!/usr/bin/env bash
+log_info "--- Task: zpool ---"
+log_info "##################################################################"
+log_info "# WARNING: NO REDUNDANCY                                        #"
+log_info "# This zpool uses a stripe (RAID0) across all data disks with   #"
+log_info "# no parity or mirroring. A single disk failure will result in  #"
+log_info "# TOTAL DATA LOSS of all zvols and their contents.              #"
+log_info "#                                                                #"
+log_info "# If the data on this pool is important, back it up regularly.  #"
+log_info "##################################################################"
+
+if [[ "$ZPOOL_ENABLED" != true ]]; then
+    log_skip "ZPOOL_ENABLED is not true; skipping zpool setup"
+    return 0
+fi
+
+if [[ ${#ZPOOL_DISKS[@]} -eq 0 ]]; then
+    die "ZPOOL_ENABLED=true but ZPOOL_DISKS is empty — set disk paths in host config"
+fi
+
+# 1. Resolve short names (sda, nvme0n1) to persistent /dev/disk/by-id/ paths.
+#    Full paths starting with / are used as-is.
+_resolve_disk_by_id() {
+    local input="$1"
+    if [[ "$input" == /* ]]; then
+        echo "$input"
+        return 0
+    fi
+    local target="/dev/${input}"
+    local by_id
+    by_id=$(find /dev/disk/by-id/ -maxdepth 1 -type l ! -name '*-part*' | while read -r _link; do
+        [[ "$(readlink -f "$_link")" == "$target" ]] && echo "$_link"
+    done | sort | head -1)
+    if [[ -n "$by_id" ]]; then
+        log_info "Resolved ${input} -> ${by_id}"
+        echo "$by_id"
+    else
+        log_info "No by-id entry found for ${input}; using ${target} directly"
+        echo "$target"
+    fi
+}
+
+_resolved_disks=()
+for _disk in "${ZPOOL_DISKS[@]}"; do
+    _resolved_disks+=("$(_resolve_disk_by_id "$_disk")")
+done
+
+_resolved_specials=()
+for _disk in "${ZPOOL_SPECIAL_VDEVS[@]}"; do
+    _resolved_specials+=("$(_resolve_disk_by_id "$_disk")")
+done
+
+# 2. Verify all block devices exist before doing anything destructive
+for _disk in "${_resolved_disks[@]}"; do
+    [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_DISKS in host config"
+done
+for _disk in "${_resolved_specials[@]}"; do
+    [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_SPECIAL_VDEVS in host config"
+done
+
+# 3. Create pool if it does not already exist
+if zpool list "$ZPOOL_NAME" &>/dev/null; then
+    log_skip "zpool '${ZPOOL_NAME}' already exists; skipping creation"
+else
+    log_info "Wiping existing signatures from disks..."
+    for _disk in "${_resolved_disks[@]}" "${_resolved_specials[@]}"; do
+        wipefs -a "$_disk"
+        log_changed "Wiped signatures: ${_disk}"
+    done
+
+    _zpool_args=(
+        create -f
+        -o ashift=12
+        -O compression=lz4
+        -O dnodesize=auto
+        -O "special_small_blocks=${ZPOOL_SPECIAL_SMALL_BLOCKS}"
+        -m none
+        "$ZPOOL_NAME"
+    )
+    _zpool_args+=("${_resolved_disks[@]}")
+    if [[ ${#_resolved_specials[@]} -gt 0 ]]; then
+        _zpool_args+=(special "${_resolved_specials[@]}")
+    fi
+    zpool "${_zpool_args[@]}"
+    log_changed "Created zpool '${ZPOOL_NAME}' with ${#_resolved_disks[@]} data disk(s) and ${#_resolved_specials[@]} special vdev disk(s)"
+fi
+
+# 4. Idempotent dataset property enforcement (corrects drift on re-runs)
+_zfs_set_if_needed() {
+    local prop="$1" desired="$2" dataset="$3"
+    local current
+    current=$(zfs get -H -o value "$prop" "$dataset" 2>/dev/null) || return 0
+    if [[ "$current" == "$desired" ]]; then
+        log_skip "zfs property already set: ${dataset} ${prop}=${desired}"
+    else
+        zfs set "${prop}=${desired}" "$dataset"
+        log_changed "Set zfs property: ${dataset} ${prop}=${desired} (was: ${current})"
+    fi
+}
+_zfs_set_if_needed compression          lz4                            "$ZPOOL_NAME"
+_zfs_set_if_needed dnodesize            auto                           "$ZPOOL_NAME"
+_zfs_set_if_needed special_small_blocks "$ZPOOL_SPECIAL_SMALL_BLOCKS" "$ZPOOL_NAME"
+
+# 5. ARC memory limit — persisted to modprobe config + applied live if module is loaded
+_arc_bytes=$(( ZFS_ARC_MAX_GB * 1024 * 1024 * 1024 ))
+_zfs_modprobe="options zfs zfs_arc_max=${_arc_bytes}"
+write_file /etc/modprobe.d/zfs.conf "$_zfs_modprobe" 0644 || true
+
+_sysfs_arc="/sys/module/zfs/parameters/zfs_arc_max"
+if [[ -f "$_sysfs_arc" ]]; then
+    if [[ "$(< "$_sysfs_arc")" == "$_arc_bytes" ]]; then
+        log_skip "ARC limit already live: ${ZFS_ARC_MAX_GB} GiB"
+    else
+        printf '%s' "$_arc_bytes" > "$_sysfs_arc"
+        log_changed "Applied ARC limit live: ${ZFS_ARC_MAX_GB} GiB"
+    fi
+else
+    log_skip "ZFS module not loaded yet; ARC limit will apply on next boot"
+fi

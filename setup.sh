@@ -64,6 +64,11 @@ source "${SCRIPT_DIR}/tasks/network.sh"
 # shellcheck source=tasks/storage.sh
 source "${SCRIPT_DIR}/tasks/storage.sh"
 
+if [[ "$ZPOOL_ENABLED" == true ]]; then
+    # shellcheck source=tasks/zpool.sh
+    source "${SCRIPT_DIR}/tasks/zpool.sh"
+fi
+
 # shellcheck source=tasks/system.sh
 source "${SCRIPT_DIR}/tasks/system.sh"
 

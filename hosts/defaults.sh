@@ -14,3 +14,10 @@ VM_BUILDER_AGENT_VERSION="v1.6.0"
 VM_BUILDER_AGENT_TRUSTED_CA_URL="https://homelab.tenzin.io/api/pki/vm-builder-ca.crt"
 
 TERRAFORM_VERSION="1.15.0"
+
+ZPOOL_ENABLED=false
+ZPOOL_NAME="zvols"
+ZPOOL_DISKS=()                      # spinning disks — bare list = implicit stripe (RAID0), no redundancy
+ZPOOL_SPECIAL_VDEVS=()              # SSD/NVMe devices for special vdev (stripe); empty = no special vdev
+ZPOOL_SPECIAL_SMALL_BLOCKS="128K"   # blocks ≤ this go to special vdev (metadata always does)
+ZFS_ARC_MAX_GB=8                    # ARC ceiling in GiB; tune per host to leave RAM for VMs

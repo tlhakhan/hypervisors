@@ -7,3 +7,8 @@ ROOT_DISKS=("/dev/disk/by-id/nvme-SHPP41-1000GM_AJD1N595713201V0H-part3")
 
 WAKELET_ENABLED=true
 VM_BUILDER_AGENT_ENABLED=true
+
+ZPOOL_ENABLED=true
+ZPOOL_DISKS=("sda" "sdb")               # short names or full /dev/disk/by-id/... paths
+ZPOOL_SPECIAL_VDEVS=("nvme1n1")         # one or more SSD/NVMe devices (striped special vdev)
+ZFS_ARC_MAX_GB=16
