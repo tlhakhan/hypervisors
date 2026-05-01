@@ -1,0 +1,28 @@
+name: Build and release bundled setup script
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build bundled script
+        run: bash build.sh
+
+      - name: Syntax check bundled script
+        run: bash -n dist/setup-bundled.sh
+
+      - name: Create GitHub Release and upload asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/setup-bundled.sh
+          generate_release_notes: true
