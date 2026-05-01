@@ -3,7 +3,7 @@
 
 HAS_GPU=true
 GPU_PCI_IDS=("8086:e20c" "8086:e2f7")
-GRUB_CMDLINE_LINUX_DEFAULT="amd_iommu=on iommu=pt mitigations=off apparmor=0 video=efifb:off"
+GRUB_CMDLINE_LINUX_DEFAULT="amd_iommu=on iommu=pt iommu.strict=0 mitigations=off apparmor=0 video=efifb:off"
 ROOT_DISKS=("/dev/disk/by-id/nvme-SHPP41-2000GM_SND4N423512104I6G-part3")
 
 WAKELET_ENABLED=true

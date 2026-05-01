@@ -58,7 +58,7 @@ if [[ -n "${GRUB_CMDLINE_LINUX_DEFAULT:-}" ]]; then
     log_info "grub.cfg assertions passed"
 else
     # Legacy path: no per-host GRUB_CMDLINE_LINUX_DEFAULT configured
-    _grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined}\""
+    _grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on iommu=pt iommu.strict=0 mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined}\""
     if ! replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX=.*' "$_grub_cmdline"; then
         update-grub
         flag_reboot "Updated GRUB cmdline for GPU passthrough (PCI IDs: ${_pci_ids_joined})"
