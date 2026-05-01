@@ -2,7 +2,7 @@
 log_info "--- Task: packages ---"
 
 _base_pkgs=(
-    qemu-kvm
+    qemu-system-x86
     libvirt-daemon-system
     libvirt-clients
     bridge-utils
