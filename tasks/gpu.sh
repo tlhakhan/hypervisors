@@ -18,7 +18,8 @@ done
 _vfio_conf="softdep snd_hda_intel pre: vfio-pci
 softdep xe pre: vfio-pci
 options vfio-pci ids=${_pci_ids_joined}
-options vfio-pci disable_vga=1"
+options vfio-pci disable_vga=1
+options vfio-pci disable_idle_d3=1"
 write_file /etc/modprobe.d/vfio.conf "$_vfio_conf" 0644 || _initramfs_changed=true
 
 # 3. GRUB kernel command line
@@ -57,7 +58,7 @@ if [[ -n "${GRUB_CMDLINE_LINUX_DEFAULT:-}" ]]; then
     log_info "grub.cfg assertions passed"
 else
     # Legacy path: no per-host GRUB_CMDLINE_LINUX_DEFAULT configured
-    _grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on amd_iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined} vfio-pci.disable_vga=1\""
+    _grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined}\""
     if ! replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX=.*' "$_grub_cmdline"; then
         update-grub
         flag_reboot "Updated GRUB cmdline for GPU passthrough (PCI IDs: ${_pci_ids_joined})"
