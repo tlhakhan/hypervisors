@@ -35,6 +35,8 @@ blacklist nvidia_uvm
 blacklist nvidia_modeset
 blacklist nvidiafb
 blacklist nouveau
+blacklist nova_core
+blacklist nova
 
 # Blacklist Intel Arc / Xe GPU modules
 blacklist xe
