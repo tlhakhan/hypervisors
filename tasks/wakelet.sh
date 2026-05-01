@@ -8,7 +8,7 @@ log_info "--- Task: wakelet ---"
 ensure_user wakelet
 
 # 2. Sudoers entry — shutdown only, no password prompt
-_sudoers_line="wakelet ALL=(ALL) NOPASSWD: /sbin/shutdown -h now"
+_sudoers_line=$'wakelet ALL=(ALL) NOPASSWD: /sbin/shutdown -h now\n'
 write_file /etc/sudoers.d/wakelet "${_sudoers_line}" 0440 "root:root"
 visudo -cf /etc/sudoers.d/wakelet || die "sudoers validation failed for /etc/sudoers.d/wakelet"
 

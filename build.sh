@@ -105,7 +105,7 @@ RESOLVE_FUNC
         task_name="$(basename "$task_file" .sh | tr '-' '_')"
         echo "# === tasks/$(basename "$task_file") ==="
         echo "task_${task_name}() {"
-        strip_shebang "$task_file" | sed 's/^/    /'
+        strip_shebang "$task_file"
         echo "}"
         echo ""
     done

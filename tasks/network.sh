@@ -14,7 +14,13 @@ if [[ "$_avahi_changed" == true ]]; then
 fi
 
 # 2. Netplan br0 bridge over physical ethernet interfaces
-# Replaces the cloud-init default config — br0 gets DHCP, physical NIC becomes an uplink.
+# Replaces the existing netplan config — br0 gets DHCP, physical NIC becomes an uplink.
+# Detect the existing netplan config file: 00-installer-config.yaml (Ubuntu 26.04+)
+# or 50-cloud-init.yaml (Ubuntu 24.04) or fall back to a new file we own.
+_netplan_file=$(find /etc/netplan -maxdepth 1 -name '*.yaml' 2>/dev/null | sort | head -1)
+_netplan_file="${_netplan_file:-/etc/netplan/10-hypervisor.yaml}"
+log_info "Using netplan config: ${_netplan_file}"
+
 _netplan_content='network:
   version: 2
   ethernets:
@@ -31,5 +37,5 @@ _netplan_content='network:
       parameters:
         stp: false
         forward-delay: 0'
-write_file /etc/netplan/50-cloud-init.yaml "$_netplan_content" 0600 "root:root" \
+write_file "$_netplan_file" "$_netplan_content" 0600 "root:root" \
     || flag_reboot "Updated netplan configuration (br0 bridge over physical NIC)"

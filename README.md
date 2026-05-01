@@ -103,6 +103,7 @@ Host configs live in `hosts/<hostname>.sh`. Each file sources `hosts/defaults.sh
 | `VM_BUILDER_AGENT_ENABLED` | `false` | Enable `vm-builder-agent` installation and service |
 | `VM_BUILDER_AGENT_VERSION` | `v1.5.0` | GitHub release tag for the binary; use `latest` or a specific tag |
 | `VM_BUILDER_AGENT_TRUSTED_CA_URL` | *(set in defaults)* | URL the agent fetches to get the CA used to verify client certificates |
+| `TERRAFORM_VERSION` | `1.15.0` | Terraform release version to install from releases.hashicorp.com |
 
 ### Adding a new host
 
@@ -134,4 +135,4 @@ git push --tags
 - Pin to a specific version by setting `VM_BUILDER_AGENT_VERSION="v0.1.2"` in the host config; set to `latest` to always pull the newest release.
 - The service uses mTLS on `:8443`, stores generated TLS material in `/etc/vm-builder-agent/private`, and workspaces in `/var/lib/vm-builder-agent/workspaces`.
 - `VM_BUILDER_AGENT_TRUSTED_CA_URL` must be set when `VM_BUILDER_AGENT_ENABLED=true`. The agent fetches this CA at startup to verify client certificates.
-- Terraform is installed from the HashiCorp APT repo and the service uses `/usr/bin/terraform`.
+- Terraform is downloaded as a binary from `releases.hashicorp.com` and installed to `/usr/local/bin/terraform`. Set `TERRAFORM_VERSION` in the host config to pin a specific release.

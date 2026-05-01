@@ -139,7 +139,7 @@ ensure_dir() {
         return 0
     fi
     install -d -m "$mode" "$path"
-    [[ -n "$ownership" ]] && chown "$ownership" "$path"
+    if [[ -n "$ownership" ]]; then chown "$ownership" "$path"; fi
     log_changed "Created directory: $path"
 }
 
@@ -200,7 +200,9 @@ ensure_service_enabled_started() {
         log_changed "Started service: $name"
         changed=true
     fi
-    [[ "$changed" == false ]] && log_skip "Service already enabled and running: $name"
+    if [[ "$changed" == false ]]; then
+        log_skip "Service already enabled and running: $name"
+    fi
 }
 
 ensure_service_disabled_stopped() {
@@ -216,7 +218,9 @@ ensure_service_disabled_stopped() {
         log_changed "Stopped service: $name"
         changed=true
     fi
-    [[ "$changed" == false ]] && log_skip "Service already disabled/stopped: $name"
+    if [[ "$changed" == false ]]; then
+        log_skip "Service already disabled/stopped: $name"
+    fi
 }
 
 reload_systemd() {
