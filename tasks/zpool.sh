@@ -32,10 +32,10 @@ _resolve_disk_by_id() {
         [[ "$(readlink -f "$_link")" == "$target" ]] && echo "$_link"
     done | sort | head -1)
     if [[ -n "$by_id" ]]; then
-        log_info "Resolved ${input} -> ${by_id}"
+        log_info "Resolved ${input} -> ${by_id}" >&2
         echo "$by_id"
     else
-        log_info "No by-id entry found for ${input}; using ${target} directly"
+        log_info "No by-id entry found for ${input}; using ${target} directly" >&2
         echo "$target"
     fi
 }
