@@ -3,6 +3,7 @@
 
 HAS_GPU=true
 GPU_PCI_IDS=("10de:2702" "10de:22bb")
+GRUB_CMDLINE_LINUX_DEFAULT="amd_iommu=on iommu=pt pcie_acs_override=downstream,multifunction mitigations=off apparmor=0 video=efifb:off"
 ROOT_DISKS=("/dev/disk/by-id/nvme-SHPP41-1000GM_AJD1N595713201V0H-part3")
 
 WAKELET_ENABLED=true

@@ -15,6 +15,8 @@ VM_BUILDER_AGENT_TRUSTED_CA_URL="https://homelab.tenzin.io/api/pki/vm-builder-ca
 
 TERRAFORM_VERSION="1.15.0"
 
+GRUB_CMDLINE_LINUX_DEFAULT=""
+
 ZPOOL_ENABLED=false
 ZPOOL_NAME="zvols"
 ZPOOL_DISKS=()                      # spinning disks — bare list = implicit stripe (RAID0), no redundancy

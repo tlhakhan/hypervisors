@@ -16,15 +16,52 @@ done
 
 # 2. /etc/modprobe.d/vfio.conf — bind GPU PCI IDs to vfio-pci
 _vfio_conf="softdep snd_hda_intel pre: vfio-pci
+softdep xe pre: vfio-pci
 options vfio-pci ids=${_pci_ids_joined}
 options vfio-pci disable_vga=1"
 write_file /etc/modprobe.d/vfio.conf "$_vfio_conf" 0644 || _initramfs_changed=true
 
 # 3. GRUB kernel command line
-_grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on amd_iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined} vfio-pci.disable_vga=1\""
-if ! replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX=.*' "$_grub_cmdline"; then
-    update-grub
-    flag_reboot "Updated GRUB cmdline for GPU passthrough (PCI IDs: ${_pci_ids_joined})"
+if [[ -n "${GRUB_CMDLINE_LINUX_DEFAULT:-}" ]]; then
+    # Migrate: clear GRUB_CMDLINE_LINUX if it still has vfio-pci params from the old approach
+    _old_linux=$(grep -E '^GRUB_CMDLINE_LINUX=' /etc/default/grub 2>/dev/null || true)
+    if echo "$_old_linux" | grep -q "vfio-pci"; then
+        replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX=.*' 'GRUB_CMDLINE_LINUX=""' || true
+        log_changed "Cleared stale GRUB_CMDLINE_LINUX (migrated to GRUB_CMDLINE_LINUX_DEFAULT)"
+    fi
+
+    _target="GRUB_CMDLINE_LINUX_DEFAULT=\"${GRUB_CMDLINE_LINUX_DEFAULT} vfio-pci.ids=${_pci_ids_joined} vfio-pci.disable_vga=1\""
+    _current=$(grep -E '^GRUB_CMDLINE_LINUX_DEFAULT=.*' /etc/default/grub 2>/dev/null || true)
+    if [[ "$_current" != "$_target" ]]; then
+        cp /etc/default/grub /etc/default/grub.bak
+        log_info "Backed up /etc/default/grub → /etc/default/grub.bak"
+    fi
+
+    if ! replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX_DEFAULT=.*' "$_target"; then
+        update-grub
+        flag_reboot "Updated GRUB_CMDLINE_LINUX_DEFAULT"
+    fi
+
+    _grub_cfg=/boot/grub/grub.cfg
+    grep -q "iommu=pt" "$_grub_cfg" 2>/dev/null || die "grub.cfg missing iommu=pt"
+    grep -q "amd_iommu=pt" "$_grub_cfg" 2>/dev/null && die "grub.cfg still contains amd_iommu=pt" || true
+
+    if echo "$GRUB_CMDLINE_LINUX_DEFAULT" | grep -q "pcie_acs_override"; then
+        grep -q "pcie_acs_override" "$_grub_cfg" 2>/dev/null \
+            || die "grub.cfg missing pcie_acs_override"
+    else
+        grep -q "pcie_acs_override" "$_grub_cfg" 2>/dev/null \
+            && die "grub.cfg contains pcie_acs_override (should be absent)" || true
+    fi
+
+    log_info "grub.cfg assertions passed"
+else
+    # Legacy path: no per-host GRUB_CMDLINE_LINUX_DEFAULT configured
+    _grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on amd_iommu=pt mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined} vfio-pci.disable_vga=1\""
+    if ! replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX=.*' "$_grub_cmdline"; then
+        update-grub
+        flag_reboot "Updated GRUB cmdline for GPU passthrough (PCI IDs: ${_pci_ids_joined})"
+    fi
 fi
 
 # 4. Blacklist host GPU drivers so they are available for VM passthrough
