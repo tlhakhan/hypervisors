@@ -74,6 +74,9 @@ else
         -O compression=lz4
         -O dnodesize=auto
         -O "special_small_blocks=${ZPOOL_SPECIAL_SMALL_BLOCKS}"
+        -O "sync=${ZPOOL_SYNC}"
+        -O "logbias=${ZPOOL_LOGBIAS}"
+        -O "primarycache=${ZPOOL_PRIMARYCACHE}"
         -m none
         "$ZPOOL_NAME"
     )
@@ -100,6 +103,9 @@ _zfs_set_if_needed() {
 _zfs_set_if_needed compression          lz4                            "$ZPOOL_NAME"
 _zfs_set_if_needed dnodesize            auto                           "$ZPOOL_NAME"
 _zfs_set_if_needed special_small_blocks "$ZPOOL_SPECIAL_SMALL_BLOCKS" "$ZPOOL_NAME"
+_zfs_set_if_needed sync                 "$ZPOOL_SYNC"                  "$ZPOOL_NAME"
+_zfs_set_if_needed logbias              "$ZPOOL_LOGBIAS"               "$ZPOOL_NAME"
+_zfs_set_if_needed primarycache         "$ZPOOL_PRIMARYCACHE"          "$ZPOOL_NAME"
 
 # 5. ARC memory limit — persisted to modprobe config + applied live if module is loaded
 _arc_bytes=$(( ZFS_ARC_MAX_GB * 1024 * 1024 * 1024 ))
