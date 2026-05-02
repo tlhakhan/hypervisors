@@ -10,7 +10,8 @@ WAKELET_ENABLED=true
 VM_BUILDER_AGENT_ENABLED=true
 
 ZPOOL_ENABLED=true
-ZPOOL_DISKS=("sda")                     # short names or full /dev/disk/by-id/... paths
-ZPOOL_SPECIAL_VDEVS=("sdb")             # one or more SSD/NVMe devices (striped special vdev)
+ZPOOL_DISKS=("sda" "sdb" "sdc")         # short names or full /dev/disk/by-id/... paths
+ZPOOL_SPECIAL_DISKS=("nvme0n1")         # one or more SSD/NVMe devices (striped special vdev)
+ZPOOL_SPECIAL_SMALL_BLOCKS=0           # special vdev is small; metadata-only (no small block alloc)
 ZFS_ARC_MAX_GB=16
-ZFS_DIRTY_DATA_MAX_MB=512
+ZFS_DIRTY_DATA_MAX_MB=2048

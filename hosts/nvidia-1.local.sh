@@ -11,6 +11,6 @@ VM_BUILDER_AGENT_ENABLED=true
 
 ZPOOL_ENABLED=true
 ZPOOL_DISKS=("sda" "sdb")               # short names or full /dev/disk/by-id/... paths
-ZPOOL_SPECIAL_VDEVS=("nvme1n1")         # one or more SSD/NVMe devices (striped special vdev)
+ZPOOL_SPECIAL_DISKS=("nvme1n1")         # one or more SSD/NVMe devices (striped special vdev)
 ZFS_ARC_MAX_GB=16
-ZFS_DIRTY_DATA_MAX_MB=1280
+ZFS_DIRTY_DATA_MAX_MB=1024

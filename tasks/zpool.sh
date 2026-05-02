@@ -46,7 +46,7 @@ for _disk in "${ZPOOL_DISKS[@]}"; do
 done
 
 _resolved_specials=()
-for _disk in "${ZPOOL_SPECIAL_VDEVS[@]}"; do
+for _disk in "${ZPOOL_SPECIAL_DISKS[@]}"; do
     _resolved_specials+=("$(_resolve_disk_by_id "$_disk")")
 done
 
@@ -55,7 +55,7 @@ for _disk in "${_resolved_disks[@]}"; do
     [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_DISKS in host config"
 done
 for _disk in "${_resolved_specials[@]}"; do
-    [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_SPECIAL_VDEVS in host config"
+    [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_SPECIAL_DISKS in host config"
 done
 
 # 3. Create pool if it does not already exist
@@ -71,6 +71,8 @@ else
     _zpool_args=(
         create -f
         -o ashift=12
+        -o autotrim=on
+        -O atime=off
         -O compression=lz4
         -O dnodesize=auto
         -O "special_small_blocks=${ZPOOL_SPECIAL_SMALL_BLOCKS}"
@@ -100,6 +102,19 @@ _zfs_set_if_needed() {
         log_changed "Set zfs property: ${dataset} ${prop}=${desired} (was: ${current})"
     fi
 }
+_zpool_set_if_needed() {
+    local prop="$1" desired="$2" pool="$3"
+    local current
+    current=$(zpool get -H -o value "$prop" "$pool" 2>/dev/null) || return 0
+    if [[ "$current" == "$desired" ]]; then
+        log_skip "zpool property already set: ${pool} ${prop}=${desired}"
+    else
+        zpool set "${prop}=${desired}" "$pool"
+        log_changed "Set zpool property: ${pool} ${prop}=${desired} (was: ${current})"
+    fi
+}
+_zpool_set_if_needed autotrim           on                             "$ZPOOL_NAME"
+_zfs_set_if_needed atime                off                            "$ZPOOL_NAME"
 _zfs_set_if_needed compression          lz4                            "$ZPOOL_NAME"
 _zfs_set_if_needed dnodesize            auto                           "$ZPOOL_NAME"
 _zfs_set_if_needed special_small_blocks "$ZPOOL_SPECIAL_SMALL_BLOCKS" "$ZPOOL_NAME"
