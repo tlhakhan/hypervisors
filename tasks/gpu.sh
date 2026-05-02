@@ -31,7 +31,7 @@ if [[ -n "${GRUB_CMDLINE_LINUX_DEFAULT:-}" ]]; then
         log_changed "Cleared stale GRUB_CMDLINE_LINUX (migrated to GRUB_CMDLINE_LINUX_DEFAULT)"
     fi
 
-    _target="GRUB_CMDLINE_LINUX_DEFAULT=\"${GRUB_CMDLINE_LINUX_DEFAULT} vfio-pci.ids=${_pci_ids_joined} vfio-pci.disable_vga=1\""
+    _target="GRUB_CMDLINE_LINUX_DEFAULT=\"${GRUB_CMDLINE_LINUX_DEFAULT} vfio-pci.ids=${_pci_ids_joined}\""
     _current=$(grep -E '^GRUB_CMDLINE_LINUX_DEFAULT=.*' /etc/default/grub 2>/dev/null || true)
     if [[ "$_current" != "$_target" ]]; then
         cp /etc/default/grub /etc/default/grub.bak
@@ -44,25 +44,16 @@ if [[ -n "${GRUB_CMDLINE_LINUX_DEFAULT:-}" ]]; then
     fi
 
     _grub_cfg=/boot/grub/grub.cfg
-    grep -q "iommu=pt" "$_grub_cfg" 2>/dev/null || die "grub.cfg missing iommu=pt"
-    grep -q "amd_iommu=pt" "$_grub_cfg" 2>/dev/null && die "grub.cfg still contains amd_iommu=pt" || true
 
-    if echo "$GRUB_CMDLINE_LINUX_DEFAULT" | grep -q "pcie_acs_override"; then
-        grep -q "pcie_acs_override" "$_grub_cfg" 2>/dev/null \
-            || die "grub.cfg missing pcie_acs_override"
-    else
-        grep -q "pcie_acs_override" "$_grub_cfg" 2>/dev/null \
-            && die "grub.cfg contains pcie_acs_override (should be absent)" || true
-    fi
+    for _param in ${GRUB_CMDLINE_LINUX_DEFAULT} "vfio-pci.ids=${_pci_ids_joined}"; do
+        grep -qF "$_param" "$_grub_cfg" 2>/dev/null || die "grub.cfg missing: ${_param}"
+    done
+
+    grep -qF "amd_iommu=pt" "$_grub_cfg" 2>/dev/null && die "grub.cfg must not contain: amd_iommu=pt" || true
 
     log_info "grub.cfg assertions passed"
 else
-    # Legacy path: no per-host GRUB_CMDLINE_LINUX_DEFAULT configured
-    _grub_cmdline="GRUB_CMDLINE_LINUX=\"amd_iommu=on iommu=pt iommu.strict=0 mitigations=off apparmor=0 video=efifb:off pcie_acs_override=downstream,multifunction vfio-pci.ids=${_pci_ids_joined}\""
-    if ! replace_line /etc/default/grub '^GRUB_CMDLINE_LINUX=.*' "$_grub_cmdline"; then
-        update-grub
-        flag_reboot "Updated GRUB cmdline for GPU passthrough (PCI IDs: ${_pci_ids_joined})"
-    fi
+    log_skip "GRUB_CMDLINE_LINUX_DEFAULT not set; skipping GRUB cmdline update"
 fi
 
 # 4. Blacklist host GPU drivers so they are available for VM passthrough
