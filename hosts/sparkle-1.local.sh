@@ -17,4 +17,4 @@ ZPOOL_SPECIAL_SMALL_BLOCKS=0           # special vdev is small; metadata-only (n
 ZPOOL_SYNC="standard"                  # active ZIL — use log device
 ZPOOL_LOGBIAS="latency"               # optimize for low-latency writes via ZIL
 ZFS_ARC_MAX_GB=16
-ZFS_DIRTY_DATA_MAX_MB=2048
+ZFS_DIRTY_DATA_MAX_MB=768

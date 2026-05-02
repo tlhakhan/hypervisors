@@ -16,4 +16,4 @@ ZPOOL_LOG_DISKS=("nvme1n1")            # shares NVMe with special vdev; auto-par
 ZPOOL_SYNC="standard"                  # active ZIL — use log device
 ZPOOL_LOGBIAS="latency"               # optimize for low-latency writes via ZIL
 ZFS_ARC_MAX_GB=16
-ZFS_DIRTY_DATA_MAX_MB=1024
+ZFS_DIRTY_DATA_MAX_MB=768
