@@ -72,6 +72,9 @@ fi
 # shellcheck source=tasks/system.sh
 source "${SCRIPT_DIR}/tasks/system.sh"
 
+# shellcheck source=tasks/libvirt-guests.sh
+source "${SCRIPT_DIR}/tasks/libvirt-guests.sh"
+
 if [[ "$WAKELET_ENABLED" == true ]]; then
     # shellcheck source=tasks/wakelet.sh
     source "${SCRIPT_DIR}/tasks/wakelet.sh"

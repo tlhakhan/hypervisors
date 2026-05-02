@@ -100,6 +100,7 @@ RESOLVE_FUNC
         "${REPO_ROOT}/tasks/storage.sh" \
         "${REPO_ROOT}/tasks/zpool.sh" \
         "${REPO_ROOT}/tasks/system.sh" \
+        "${REPO_ROOT}/tasks/libvirt-guests.sh" \
         "${REPO_ROOT}/tasks/wakelet.sh" \
         "${REPO_ROOT}/tasks/vm-builder-agent.sh"; do
 
@@ -153,6 +154,7 @@ task_network
 task_storage
 [[ "$ZPOOL_ENABLED" == true ]] && task_zpool
 task_system
+task_libvirt_guests
 
 [[ "$WAKELET_ENABLED" == true ]] && task_wakelet
 [[ "$VM_BUILDER_AGENT_ENABLED" == true ]] && task_vm_builder_agent
