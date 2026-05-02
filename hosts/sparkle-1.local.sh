@@ -13,3 +13,4 @@ ZPOOL_ENABLED=true
 ZPOOL_DISKS=("sda")                     # short names or full /dev/disk/by-id/... paths
 ZPOOL_SPECIAL_VDEVS=("sdb")             # one or more SSD/NVMe devices (striped special vdev)
 ZFS_ARC_MAX_GB=16
+ZFS_DIRTY_DATA_MAX_MB=512

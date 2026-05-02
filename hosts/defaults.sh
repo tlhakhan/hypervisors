@@ -32,3 +32,5 @@ ZPOOL_SYNC="disabled"               # skip ZIL for VM zvols; guest OS handles jo
 ZPOOL_LOGBIAS="throughput"          # optimize for sequential VM I/O
 ZPOOL_PRIMARYCACHE="metadata"       # cache only metadata in ARC; guests have their own page cache
 ZFS_ARC_MAX_GB=8                    # ARC ceiling in GiB; tune per host to leave RAM for VMs
+ZFS_DIRTY_DATA_MAX_MB=0             # max dirty data before write throttle (0 = kernel default)
+ZFS_TXG_TIMEOUT=1                   # transaction group commit interval in seconds

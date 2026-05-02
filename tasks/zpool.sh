@@ -107,19 +107,32 @@ _zfs_set_if_needed sync                 "$ZPOOL_SYNC"                  "$ZPOOL_N
 _zfs_set_if_needed logbias              "$ZPOOL_LOGBIAS"               "$ZPOOL_NAME"
 _zfs_set_if_needed primarycache         "$ZPOOL_PRIMARYCACHE"          "$ZPOOL_NAME"
 
-# 5. ARC memory limit — persisted to modprobe config + applied live if module is loaded
+# 5. ZFS module parameters — persisted to modprobe config + applied live if module is loaded
+_apply_zfs_param() {
+    local param="$1" value="$2" label="$3"
+    local sysfs="/sys/module/zfs/parameters/${param}"
+    if [[ -f "$sysfs" ]]; then
+        if [[ "$(< "$sysfs")" == "$value" ]]; then
+            log_skip "ZFS param already live: ${param}=${value}"
+        else
+            printf '%s' "$value" > "$sysfs"
+            log_changed "Applied ZFS param live: ${param}=${value} (${label})"
+        fi
+    else
+        log_skip "ZFS module not loaded yet; ${param} will apply on next boot"
+    fi
+}
+
 _arc_bytes=$(( ZFS_ARC_MAX_GB * 1024 * 1024 * 1024 ))
-_zfs_modprobe="options zfs zfs_arc_max=${_arc_bytes}"
+_zfs_modprobe="options zfs zfs_arc_max=${_arc_bytes} zfs_txg_timeout=${ZFS_TXG_TIMEOUT}"
+if [[ "$ZFS_DIRTY_DATA_MAX_MB" -gt 0 ]]; then
+    _dirty_bytes=$(( ZFS_DIRTY_DATA_MAX_MB * 1024 * 1024 ))
+    _zfs_modprobe+=" zfs_dirty_data_max=${_dirty_bytes}"
+fi
 write_file /etc/modprobe.d/zfs.conf "$_zfs_modprobe" 0644 || true
 
-_sysfs_arc="/sys/module/zfs/parameters/zfs_arc_max"
-if [[ -f "$_sysfs_arc" ]]; then
-    if [[ "$(< "$_sysfs_arc")" == "$_arc_bytes" ]]; then
-        log_skip "ARC limit already live: ${ZFS_ARC_MAX_GB} GiB"
-    else
-        printf '%s' "$_arc_bytes" > "$_sysfs_arc"
-        log_changed "Applied ARC limit live: ${ZFS_ARC_MAX_GB} GiB"
-    fi
-else
-    log_skip "ZFS module not loaded yet; ARC limit will apply on next boot"
+_apply_zfs_param zfs_arc_max        "$_arc_bytes"           "${ZFS_ARC_MAX_GB} GiB ARC"
+_apply_zfs_param zfs_txg_timeout    "$ZFS_TXG_TIMEOUT"      "${ZFS_TXG_TIMEOUT}s txg timeout"
+if [[ "$ZFS_DIRTY_DATA_MAX_MB" -gt 0 ]]; then
+    _apply_zfs_param zfs_dirty_data_max "$_dirty_bytes"     "${ZFS_DIRTY_DATA_MAX_MB} MiB dirty data max"
 fi
