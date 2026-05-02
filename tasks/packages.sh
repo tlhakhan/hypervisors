@@ -22,4 +22,7 @@ fi
 
 if [[ "$ZPOOL_ENABLED" == true ]]; then
     install_packages zfsutils-linux
+    if [[ ${#ZPOOL_LOG_DISKS[@]} -gt 0 ]]; then
+        install_packages gdisk
+    fi
 fi

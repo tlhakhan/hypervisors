@@ -27,6 +27,7 @@ ZPOOL_ENABLED=false
 ZPOOL_NAME="zvols"
 ZPOOL_DISKS=()                      # spinning disks — bare list = implicit stripe (RAID0), no redundancy
 ZPOOL_SPECIAL_DISKS=()              # SSD/NVMe devices for special vdev (stripe); empty = no special vdev
+ZPOOL_LOG_DISKS=()                  # NVMe/SSD devices for ZIL/SLOG log vdev; empty = no log vdev
 ZPOOL_SPECIAL_SMALL_BLOCKS="128K"   # blocks ≤ this go to special vdev (metadata always does)
 ZPOOL_SYNC="disabled"               # skip ZIL for VM zvols; guest OS handles journaling
 ZPOOL_LOGBIAS="throughput"          # optimize for sequential VM I/O

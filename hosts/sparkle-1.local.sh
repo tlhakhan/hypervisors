@@ -12,6 +12,9 @@ VM_BUILDER_AGENT_ENABLED=true
 ZPOOL_ENABLED=true
 ZPOOL_DISKS=("sda" "sdb" "sdc")         # short names or full /dev/disk/by-id/... paths
 ZPOOL_SPECIAL_DISKS=("nvme0n1")         # one or more SSD/NVMe devices (striped special vdev)
+ZPOOL_LOG_DISKS=("nvme0n1")            # shares NVMe with special vdev; auto-partitioned (ZIL=4GiB p1, special=remainder p2)
 ZPOOL_SPECIAL_SMALL_BLOCKS=0           # special vdev is small; metadata-only (no small block alloc)
+ZPOOL_SYNC="standard"                  # active ZIL — use log device
+ZPOOL_LOGBIAS="latency"               # optimize for low-latency writes via ZIL
 ZFS_ARC_MAX_GB=16
 ZFS_DIRTY_DATA_MAX_MB=2048

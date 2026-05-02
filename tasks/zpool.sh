@@ -40,6 +40,23 @@ _resolve_disk_by_id() {
     fi
 }
 
+_derive_partition_path() {
+    local base_path="$1" part_num="$2"
+    if [[ "$base_path" == /dev/disk/by-id/* ]]; then
+        local part_link="${base_path}-part${part_num}"
+        [[ -L "$part_link" ]] && echo "$part_link" && return 0
+    fi
+    local real_dev
+    real_dev=$(readlink -f "$base_path")
+    local dev_name
+    dev_name=$(basename "$real_dev")
+    if [[ "$dev_name" == nvme* ]]; then
+        echo "/dev/${dev_name}p${part_num}"
+    else
+        echo "/dev/${dev_name}${part_num}"
+    fi
+}
+
 _resolved_disks=()
 for _disk in "${ZPOOL_DISKS[@]}"; do
     _resolved_disks+=("$(_resolve_disk_by_id "$_disk")")
@@ -50,6 +67,11 @@ for _disk in "${ZPOOL_SPECIAL_DISKS[@]}"; do
     _resolved_specials+=("$(_resolve_disk_by_id "$_disk")")
 done
 
+_resolved_logs=()
+for _disk in "${ZPOOL_LOG_DISKS[@]}"; do
+    _resolved_logs+=("$(_resolve_disk_by_id "$_disk")")
+done
+
 # 2. Verify all block devices exist before doing anything destructive
 for _disk in "${_resolved_disks[@]}"; do
     [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_DISKS in host config"
@@ -57,13 +79,44 @@ done
 for _disk in "${_resolved_specials[@]}"; do
     [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_SPECIAL_DISKS in host config"
 done
+for _disk in "${_resolved_logs[@]}"; do
+    [[ -b "$_disk" ]] || die "Block device not found: $_disk — fix ZPOOL_LOG_DISKS in host config"
+done
 
 # 3. Create pool if it does not already exist
 if zpool list "$ZPOOL_NAME" &>/dev/null; then
     log_skip "zpool '${ZPOOL_NAME}' already exists; skipping creation"
 else
+    # Detect shared-disk scenario: 1 log disk + 1 special disk pointing to the same device
+    _shared_disk_partition=false
+    if [[ ${#ZPOOL_LOG_DISKS[@]} -eq 1 && ${#ZPOOL_SPECIAL_DISKS[@]} -eq 1 ]]; then
+        _log_real=$(readlink -f "${_resolved_logs[0]}")
+        _special_real=$(readlink -f "${_resolved_specials[0]}")
+        if [[ "$_log_real" == "$_special_real" ]]; then
+            _shared_disk_partition=true
+            log_info "Log and special vdev are the same device (${_log_real}); auto-partitioning"
+            sgdisk --zap-all "$_log_real"
+            sgdisk \
+                --new=1:0:+4G   --typecode=1:bf01 --change-name=1:"zil" \
+                --new=2:0:0     --typecode=2:bf01 --change-name=2:"special" \
+                "$_log_real"
+            udevadm settle
+            log_changed "Partitioned ${_log_real}: ZIL (part1=4GiB), special (part2=remainder)"
+            _zil_part=$(_derive_partition_path "${_resolved_logs[0]}" 1)
+            _special_part=$(_derive_partition_path "${_resolved_logs[0]}" 2)
+            [[ -b "$_zil_part" ]]     || die "ZIL partition not found after partitioning: $_zil_part"
+            [[ -b "$_special_part" ]] || die "Special partition not found after partitioning: $_special_part"
+            _resolved_logs=("$_zil_part")
+            _resolved_specials=("$_special_part")
+        fi
+    fi
+
     log_info "Wiping existing signatures from disks..."
-    for _disk in "${_resolved_disks[@]}" "${_resolved_specials[@]}"; do
+    _disks_to_wipe=("${_resolved_disks[@]}")
+    if [[ "$_shared_disk_partition" == false ]]; then
+        _disks_to_wipe+=("${_resolved_logs[@]}" "${_resolved_specials[@]}")
+    fi
+    for _disk in "${_disks_to_wipe[@]}"; do
         wipefs -a "$_disk"
         log_changed "Wiped signatures: ${_disk}"
     done
@@ -83,11 +136,14 @@ else
         "$ZPOOL_NAME"
     )
     _zpool_args+=("${_resolved_disks[@]}")
+    if [[ ${#_resolved_logs[@]} -gt 0 ]]; then
+        _zpool_args+=(log "${_resolved_logs[@]}")
+    fi
     if [[ ${#_resolved_specials[@]} -gt 0 ]]; then
         _zpool_args+=(special "${_resolved_specials[@]}")
     fi
     zpool "${_zpool_args[@]}"
-    log_changed "Created zpool '${ZPOOL_NAME}' with ${#_resolved_disks[@]} data disk(s) and ${#_resolved_specials[@]} special vdev disk(s)"
+    log_changed "Created zpool '${ZPOOL_NAME}' with ${#_resolved_disks[@]} data disk(s), ${#_resolved_logs[@]} log disk(s), and ${#_resolved_specials[@]} special vdev disk(s)"
 fi
 
 # 4. Idempotent dataset property enforcement (corrects drift on re-runs)
